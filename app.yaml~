@@ -1,0 +1,19 @@
+application: gds-demo
+version: uno
+runtime: php
+api_version: 1
+threadsafe: false
+
+handlers:
+
+- url: /datastore_connect
+  script: datastore_connect.php
+
+- url: /timeline
+  script: timeline.php
+
+- url: /datastore_connect2
+  script: datastore_connect2.php
+
+- url: /model_example
+  script: model_example.php
