@@ -1,28 +1,12 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Timelinator</title>
-    <link rel="stylesheet" type="text/css" href="static/style.css" />
-  </head>
-
-  <body>
-    <h2>Welcome to Timelinator - The killer timeline app :-)</h2>
-    <form action="timeline" method="post">
-      <p><label for="status"> What's up? </label> <input type="text" id="status" name="status" /></p>
-      <p><label for="person"> Who are you? </label> <input type="text" id="person" name="person" /></p>
-      <input value="Submit" type="submit"/>
-    </form>
-  </body>
-
-</html> 
-
 <?php
-
+require_once 'login.php';
+require_once 'timelineView.php';
 require_once 'config.php';
 require_once 'DatastoreService.php';
 require_once 'google-api-php-client/src/Google/Client.php';
 require_once 'google-api-php-client/src/Google/Auth/AssertionCredentials.php';
 require_once 'google-api-php-client/src/Google/Service/Datastore.php';
+
 
 DatastoreService::setInstance(new DatastoreService($google_api_config));
 
@@ -70,14 +54,12 @@ function get_status () {
   }
 }
 
-get_status();
-
 //Safe data to the datastore. Runs only if form is filled
 
-if ((!empty($_POST['status'])) && (!empty($_POST['person']))) {
+if (!empty($_POST['status'])) {
 
   $status = $_POST['status'];
-  $person = $_POST['person'];
+  $person = $user->getNickname();
 
   // Function creates entity and commits it to Datastore
 
@@ -131,4 +113,5 @@ if ((!empty($_POST['status'])) && (!empty($_POST['person']))) {
   }
   echo "Status saved. Refresh page to see it";
 }
+get_status();
 ?>

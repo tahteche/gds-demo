@@ -17,3 +17,9 @@ handlers:
 
 - url: /model_example
   script: model_example.php
+
+- url: /static
+  static_dir: static
+
+- url: /logout
+  script: logout.php
