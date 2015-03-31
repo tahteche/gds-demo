@@ -16,7 +16,19 @@ function createQuery($kind_name) {
   $query = new Google_Service_Datastore_Query();
   $kind = new Google_Service_Datastore_KindExpression();
   $kind->setName($kind_name);
+
+  //$sortProperty is property used to sort the results  
+  $sortProperty = new Google_Service_Datastore_PropertyReference();
+  $sortProperty->setName('time');
+
+  //$sortOrder uses $sortProperty and a direction (DESCENDING/ASCENDING) to sort results
+  $sortOrder = new Google_Service_Datastore_PropertyOrder();
+  $sortOrder->setDirection('DESCENDING');
+  $sortOrder->setProperty($sortProperty);
+
   $query->setKinds([$kind]);
+  $query->setGroupBy($sortProperty);
+  $query->setOrder([$sortOrder]);
   return $query;
 }
 
@@ -40,8 +52,15 @@ function extractQueryResults($results) {
     $props = $result['entity']['properties'];
     $status = $props['status']->getStringValue();
     $person = $props['person']->getStringValue();
-    $timeline_item = [$person, $status];
+    if (isset($props['time'])) {
+      $time = $props['time']->getDateTimeValue();
+    }
+    else{
+      $time = null;
+    }
+    $timeline_item = [$person, $status, $time];
     $query_results[] = $timeline_item;
+    unset($result);
   }
   return $query_results;
 }
@@ -50,7 +69,13 @@ function extractQueryResults($results) {
 function get_status () {
   $timeline_items = extractQueryResults(executeQuery(createQuery('timeline_items')));
   foreach ($timeline_items as $timeline_item) {
-    echo '<p><span id="person">' . $timeline_item[0] . '</span> said: <span id="status">' . $timeline_item[1] . '</span></p>';
+
+    //Converting the time ($timeline_item) from RFC 3339 format to readable time.
+    $time = new DateTime($timeline_item[2]);
+    $readableTime = $time->format('H:i Y-m-d');
+
+    echo '<p>At <span class="time">' . $readableTime . '</span> <span class="person">' . $timeline_item[0] .
+     '</span> said: <span class="status">' . $timeline_item[1] . '</span></p>';
   }
 }
 
@@ -75,9 +100,14 @@ if (!empty($_POST['status'])) {
     $person_prop = new Google_Service_Datastore_Property();
     $person_prop->setStringValue($person);
 
+    //save the time
+    $time = new Google_Service_Datastore_Property();
+    $time->setDateTimeValue(date(DATE_RFC3339));
+
     $timeline_item_properties = [];
     $timeline_item_properties["status"] = $status_prop;
     $timeline_item_properties["person"] = $person_prop;
+    $timeline_item_properties["time"] = $time;
     $timeline_item->setProperties($timeline_item_properties);
 
     // Assigning the KIND for the $timeline_item

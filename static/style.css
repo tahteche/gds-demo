@@ -1,6 +1,9 @@
-#person {
+.person {
   color: #0E29E7;
 }
-#status {
+.status {
   color: #229A26;
+}
+.time{
+  color: #787878;
 }
