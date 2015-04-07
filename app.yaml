@@ -23,3 +23,6 @@ handlers:
 
 - url: /logout
   script: logout.php
+
+- url: /prediction
+  script: prediction.php

@@ -1,6 +1,7 @@
 <?php
 require_once 'login.php';
 require_once 'timelineView.php';
+require_once 'prediction.php';
 require_once 'config.php';
 require_once 'DatastoreService.php';
 require_once 'google-api-php-client/src/Google/Client.php';
@@ -52,13 +53,14 @@ function extractQueryResults($results) {
     $props = $result['entity']['properties'];
     $status = $props['status']->getStringValue();
     $person = $props['person']->getStringValue();
+    $lang = $props['lang']->getStringValue();
     if (isset($props['time'])) {
       $time = $props['time']->getDateTimeValue();
     }
     else{
       $time = null;
     }
-    $timeline_item = [$person, $status, $time];
+    $timeline_item = [$person, $status, $time, $lang];
     $query_results[] = $timeline_item;
     unset($result);
   }
@@ -75,7 +77,7 @@ function get_status () {
     $readableTime = $time->format('H:i Y-m-d');
 
     echo '<p>At <span class="time">' . $readableTime . '</span> <span class="person">' . $timeline_item[0] .
-     '</span> said: <span class="status">' . $timeline_item[1] . '</span></p>';
+          '</span> said: <span class="status">' . $timeline_item[1] . '</span> (' . $timeline_item[3] . ')</p>';
   }
 }
 
@@ -104,10 +106,16 @@ if (!empty($_POST['status'])) {
     $time = new Google_Service_Datastore_Property();
     $time->setDateTimeValue(date(DATE_RFC3339));
 
+    // predict the language of the status using predictLang() in prediction.php
+    $lang_prop = new Google_Service_Datastore_Property();
+    $lang = predictLang($status);
+    $lang_prop->setStringValue($lang);
+
     $timeline_item_properties = [];
     $timeline_item_properties["status"] = $status_prop;
     $timeline_item_properties["person"] = $person_prop;
     $timeline_item_properties["time"] = $time;
+    $timeline_item_properties["lang"] = $lang_prop;
     $timeline_item->setProperties($timeline_item_properties);
 
     // Assigning the KIND for the $timeline_item
