@@ -70,15 +70,25 @@ function extractQueryResults($results) {
 
 function get_status () {
   $timeline_items = extractQueryResults(executeQuery(createQuery('timeline_items')));
+  $i = 1; //Initialising $i Used to create alternating colors of the timeline
   foreach ($timeline_items as $timeline_item) {
+    if (($i % 2) == 0) {
+      $rowParity = 'even';
+    }
+    else{
+      $rowParity = 'odd';
+    }    
 
     //Converting the time ($timeline_item) from RFC 3339 format to readable time.
     $time = new DateTime($timeline_item[2]);
     $readableTime = $time->format('H:i Y-m-d');
 
-    echo '<p>At <span class="time">' . $readableTime . '</span> <span class="person">' . $timeline_item[0] .
-          '</span> said: <span class="status">' . $timeline_item[1] . '</span> (' . $timeline_item[3] . ')</p>';
+    echo '<div class="post-item ' . $rowParity . '"><p class="status-info">At <span class="time">' . $readableTime . '</span>, <span class="person">' .
+          $timeline_item[0] . '</span> said: </p><p class="status">' . $timeline_item[1] . ' (' . $timeline_item[3] . ')</p></div>' . "\n";
+
+    $i++;
   }
+  echo "</div></body></html>"; //end of HTML page
 }
 
 //Safe data to the datastore. Runs only if form is filled
@@ -153,3 +163,4 @@ if (!empty($_POST['status'])) {
 }
 get_status();
 ?>
+
