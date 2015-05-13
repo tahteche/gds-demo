@@ -1,4 +1,17 @@
 <?php
+
+//===========Including Google Cloud Datastore API=====================
+require_once 'google/appengine/api/cloud_storage/CloudStorageTools.php';
+use google\appengine\api\cloud_storage\CloudStorageTools;
+
+// Created GCS upload url first since it needs to be past to the view (timelineView.php)
+$options = [ 'gs_bucket_name' => 'gds-demo.appspot.com' ];
+$upload_url = CloudStorageTools::createUploadUrl('/timeline', $options);
+
+if (isset($_POST['status'])) {
+ header('Location: ' . $_SERVER['REQUEST_URI']);
+}
+
 require_once 'login.php';
 require_once 'timelineView.php';
 require_once 'prediction.php';
@@ -7,7 +20,6 @@ require_once 'DatastoreService.php';
 require_once 'google-api-php-client/src/Google/Client.php';
 require_once 'google-api-php-client/src/Google/Auth/AssertionCredentials.php';
 require_once 'google-api-php-client/src/Google/Service/Datastore.php';
-
 
 DatastoreService::setInstance(new DatastoreService($google_api_config));
 
@@ -60,7 +72,13 @@ function extractQueryResults($results) {
     else{
       $time = null;
     }
-    $timeline_item = [$person, $status, $time, $lang];
+    if (isset($props['picture'])) {
+      $picture = $props['picture']->getStringValue();
+    }
+    else{
+      $picture = null;
+    }
+    $timeline_item = [$person, $status, $time, $lang, $picture];
     $query_results[] = $timeline_item;
     unset($result);
   }
@@ -83,8 +101,15 @@ function get_status () {
     $time = new DateTime($timeline_item[2]);
     $readableTime = $time->format('H:i Y-m-d');
 
-    echo '<div class="post-item ' . $rowParity . '"><p class="status-info">At <span class="time">' . $readableTime . '</span>, <span class="person">' .
-          $timeline_item[0] . '</span> said: </p><p class="status">' . $timeline_item[1] . ' (' . $timeline_item[3] . ')</p></div>' . "\n";
+    //Create display URL for image and resize image to 400px
+    if (!empty($timeline_item[4]) && ($timeline_item[4] != 'null')) {
+      $timeline_item[4] = CloudStorageTools::getImageServingUrl($timeline_item[4],
+                                            ['size' => 400]);
+    }
+
+    echo '<div class="post-item ' . $rowParity . '"><p class="status-info">At <span class="time">' . $readableTime .
+         '</span>, <span class="person">' . $timeline_item[0] . '</span> said: </p><p class="status">' . $timeline_item[1] .
+          ' (' . $timeline_item[3] . ')</p><img src="' . $timeline_item[4] . '" /></div>' . "\n";
 
     $i++;
   }
@@ -98,10 +123,25 @@ if (!empty($_POST['status'])) {
   $status = $_POST['status'];
   $person = $user->getNickname();
 
+  //Safe uploaded file to GCS and return file name to be used by Datastore
+
+  if (!empty($_FILES['picture']['tmp_name'])) {
+    $gs_name = $_FILES['picture']['tmp_name'];
+    $filename = time() . '.jpg';
+    $newFileLocation = 'gs://gds-demo.appspot.com/' . $filename;
+    move_uploaded_file($gs_name, $newFileLocation);
+    $picture = $newFileLocation;
+  } 
+  else{
+    $picture = 'null';
+  }
+
+
+
   // Function creates entity and commits it to Datastore
 
-  function safe_status($person, $status){
-    // $timeline_item is an object containing all the information for a particular post (person's name, status and date) on the timeline
+  function safe_status($person, $status, $file){
+    // $timeline_item is an object containing all the information for a particular post (person's name, status, picture and date) on the timeline
     $timeline_item = new Google_Service_Datastore_Entity();
 
     // create property to store $status
@@ -111,6 +151,10 @@ if (!empty($_POST['status'])) {
     // create property to store $person
     $person_prop = new Google_Service_Datastore_Property();
     $person_prop->setStringValue($person);
+
+    //create property to store $file
+    $file_prop = new Google_Service_Datastore_Property();
+    $file_prop->setStringValue($file);
 
     //save the time
     $time = new Google_Service_Datastore_Property();
@@ -124,6 +168,7 @@ if (!empty($_POST['status'])) {
     $timeline_item_properties = [];
     $timeline_item_properties["status"] = $status_prop;
     $timeline_item_properties["person"] = $person_prop;
+    $timeline_item_properties["picture"] = $file_prop;
     $timeline_item_properties["time"] = $time;
     $timeline_item_properties["lang"] = $lang_prop;
     $timeline_item->setProperties($timeline_item_properties);
@@ -148,7 +193,7 @@ if (!empty($_POST['status'])) {
     return $req;
   }
 
-  $req = safe_status($person, $status);
+  $req = safe_status($person, $status, $picture);
 
     try {
     // Commiting the the timeline status and posters name to the Google Datastore
@@ -163,4 +208,3 @@ if (!empty($_POST['status'])) {
 }
 get_status();
 ?>
-

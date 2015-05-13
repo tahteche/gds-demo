@@ -33,8 +33,9 @@
     <paper-fab id="post-button" icon="communication:comment" onclick="toggleDisplay()" ></paper-fab>
 
 
-    <form id="post-form" action="timeline" method="post">
+    <form id="post-form" action="<?php echo $upload_url ?>" enctype="multipart/form-data" method="post">
       <p><input placeholder="What's Up?" type="text" id="status" name="status" /></p>
+      <p><input placeholder="Upload a Picture" type="file" name="picture" /></p>
       <input id="submit-button" value="Submit" type="submit"/>
     </form>
     <div id="all-post">

@@ -1,10 +1,13 @@
 application: gds-demo
 version: uno
-runtime: php
+runtime: php55
 api_version: 1
 threadsafe: false
 
 handlers:
+
+- url: /
+  script: timeline.php
 
 - url: /datastore_connect
   script: datastore_connect.php
@@ -29,3 +32,6 @@ handlers:
 
 - url: /prediction
   script: prediction.php
+
+- url: /fileupload
+  script: fileupload.php
